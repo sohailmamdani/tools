@@ -1,0 +1,23 @@
+# NOTE - the 4-second delay after each command has proven to be useful, as without those delays, there process below occasionally fails.
+# Set the varialble wifi_name to the output of a shell command. This should output the hardware port name of the Wi-Fi network.
+set wifi_name to do shell script "networksetup -listallhardwareports | grep -A 1 Wi-Fi | sed -e '/Hardware Port: Wi-Fi/d' -e 's/Device: //g'"
+# Turn Wi-Fi off, then wait 4 seconds.
+do shell script "networksetup -setairportpower " & wifi_name & " off"
+delay 4
+# Remove the preferred wireless network from Network Preferences
+do shell script "networksetup -removepreferredwirelessnetwork " & wifi_name & " <WIFINAME>"
+delay 4
+# Turn off all network interfaces, because really, why not? (Kidding - I do this so that 802.1x over wired also disconnects.)
+do shell script "for i in $(ifconfig -l); do sudo ifconfig $i down; done" with administrator privileges
+delay 5
+# Delete the password for 802.1X from Keychain. WARNING: THIS WILL DELETE ALL 802.1X PASSWORDS FROM YOUR KEYCHAIN (which may not be a bad thing).
+do shell script "security delete-generic-password -D \"802.1X Password\""
+delay 4
+# Bring all the networking interfaces back up.
+do shell script "for i in $(ifconfig -l); do sudo ifconfig $i up; done" with administrator privileges
+delay 4
+# Restart Airport
+do shell script "networksetup -setairportpower " & wifi_name & " on"
+delay 4
+# Display an alert letting the user know that the process is done.
+display alert "<COMPANYNAME> Network Reset" message "Your network settings have been reset. You will need to re-select the KIXEYE wireless network from the Wi-Fi menu in your toolbar and re-enter your credentials. You will also need to unplug and plug in your ethernet cable if you are connected physically to the network." buttons "Ok"
